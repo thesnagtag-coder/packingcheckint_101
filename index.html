@@ -74,6 +74,12 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-
 .badge.outline{background:transparent;border:1px solid var(--line);color:var(--sub);}
 
 .disclaimer{font-size:.72rem;color:var(--sub);background:var(--chip);border-radius:10px;padding:8px 10px;margin-bottom:16px;}
+.collapsible-section{margin-bottom:14px;}
+.collapsible-section summary{cursor:pointer;font-weight:600;font-size:.88rem;padding:8px 10px;background:var(--chip);border-radius:10px;list-style:none;color:var(--ink);}
+.collapsible-section summary::-webkit-details-marker{display:none;}
+.collapsible-section summary::before{content:"▸ ";display:inline-block;color:var(--sub);}
+.collapsible-section[open] summary::before{content:"▾ ";}
+.collapsible-section[open] summary{border-radius:10px 10px 0 0;}
 
 .category-block{margin-bottom:16px;}
 .category-block h3{display:flex;justify-content:space-between;align-items:center;font-size:.95rem;text-transform:none;letter-spacing:0;color:var(--ink);border-bottom:1px solid var(--line);padding-bottom:6px;margin-bottom:8px;}
@@ -134,7 +140,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-
 <header class="top">
   <div>
     <h1>Universal Trip Packing Planner</h1>
-    <p class="tag-sub">Reusable for any destination, any dates, any luggage size. <span style="opacity:.55;">Build 2026-09-20-v10</span></p>
+    <p class="tag-sub">Reusable for any destination, any dates, any luggage size. <span style="opacity:.55;">Build 2026-09-20-v12</span></p>
   </div>
   <div class="topbar-actions">
     <button class="btn" id="themeToggle">Dark mode</button>
@@ -734,6 +740,45 @@ document.getElementById("emptyNewTripBtn").addEventListener("click", ()=>openTri
 --------------------------------------------------------- */
 const ALL_TAGS = ["always","hot","humid","tropical","dry","desert","cold","mild","beach","snorkel","modest","healthrisk","space-limited"];
 
+function openQuickAddBagModal(trip, travelerId){
+  const traveler = trip.travelers.find(t=>t.id===travelerId);
+  if(!traveler) return;
+  const root = document.getElementById("modalRoot");
+  const typeOptions = Object.entries(BAG_TYPES).map(([k,v])=>`<option value="${k}">${v.label}</option>`).join("");
+  root.innerHTML = `
+  <div class="modal-backdrop" id="quickBagBackdrop">
+    <div class="modal" style="max-width:380px;">
+      <button class="modal-close" id="closeQuickBagModal">&times;</button>
+      <h2>Add a bag for ${escapeHtml(traveler.name||"this traveler")}</h2>
+      <label>Bag label</label>
+      <input type="text" id="quickBagName" placeholder="e.g. Camera bag, Fanny pack" autofocus>
+      <label>Bag type</label>
+      <select id="quickBagType">${typeOptions}</select>
+      <div class="foot-actions">
+        <button class="btn ghost" id="cancelQuickBag">Cancel</button>
+        <button class="btn primary" id="saveQuickBag">Add bag</button>
+      </div>
+    </div>
+  </div>`;
+  const close = ()=>{ root.innerHTML = ""; };
+  document.getElementById("closeQuickBagModal").addEventListener("click", close);
+  document.getElementById("cancelQuickBag").addEventListener("click", close);
+  document.getElementById("quickBagBackdrop").addEventListener("click", (e)=>{ if(e.target.id==="quickBagBackdrop") close(); });
+  const nameInput = document.getElementById("quickBagName");
+  nameInput.focus();
+  function save(){
+    const name = nameInput.value.trim();
+    if(!name) { nameInput.focus(); return; }
+    const type = document.getElementById("quickBagType").value;
+    traveler.bags.push({id:uid(), name, type});
+    saveState();
+    close();
+    renderMainArea();
+  }
+  document.getElementById("saveQuickBag").addEventListener("click", save);
+  nameInput.addEventListener("keydown", (e)=>{ if(e.key==="Enter") save(); });
+}
+
 function openItemManager(){
   const root = document.getElementById("modalRoot");
   function catHtml(cat){
@@ -993,6 +1038,9 @@ function renderMainArea(){
         rows.push(buildRow(key, qty, it.name, it));
       }
     });
+    if(cat==="Visa & Entry"){
+      return `<details class="collapsible-section"><summary>${escapeHtml(cat)}</summary><div class="category-block" style="margin-top:8px;">${rows.join("")}</div></details>`;
+    }
     return `<div class="category-block"><h3>${escapeHtml(cat)}</h3>${rows.join("")}</div>`;
   }).join("");
 
@@ -1024,8 +1072,8 @@ function renderMainArea(){
         </div>
       </div>
       <div class="weather-grid">${weatherHtml}</div>
-      ${customsSet.size ? `<div class="disclaimer"><strong>General customs &amp; dress-code notes (verify current rules before travel):</strong><ul style="margin:6px 0 0 18px;padding:0;">${Array.from(customsSet).map(c=>`<li>${escapeHtml(c)}</li>`).join("")}</ul></div>` : ''}
-      ${visaCardsHtml ? `<h3 style="margin-top:18px;">Visa &amp; entry - check before you fly</h3><div class="weather-grid">${visaCardsHtml}</div>` : (trip.legs.some(l=>l.country) ? '<p class="small-note">Add a nationality for each traveler above to see visa/entry checklist links per destination.</p>' : '')}
+      ${customsSet.size ? `<details class="collapsible-section"><summary>General customs &amp; dress-code notes</summary><div class="disclaimer" style="margin-top:8px;"><ul style="margin:0 0 0 18px;padding:0;">${Array.from(customsSet).map(c=>`<li>${escapeHtml(c)}</li>`).join("")}</ul></div></details>` : ''}
+      ${visaCardsHtml ? `<details class="collapsible-section"><summary>Visa &amp; entry - check before you fly</summary><div class="weather-grid" style="margin-top:8px;">${visaCardsHtml}</div></details>` : (trip.legs.some(l=>l.country) ? '<p class="small-note">Add a nationality for each traveler above to see visa/entry checklist links per destination.</p>' : '')}
       <p class="small-note">Use the dropdown next to each item to choose which bag it goes in, or mark it as a digital file / kept separately.</p>
       ${categoriesHtml || '<p class="small-note">No matching items yet - add some in "Manage item list".</p>'}
     </div>
@@ -1048,12 +1096,7 @@ function renderMainArea(){
   });
   mainArea.querySelectorAll("[data-quickaddbag]").forEach(btn=>{
     btn.addEventListener("click", ()=>{
-      const name = prompt("New bag label (e.g. Camera bag, Fanny pack):");
-      if(name===null || !name.trim()) return;
-      const t = trip.travelers.find(t=>t.id===btn.dataset.quickaddbag);
-      t.bags.push({id:uid(), name:name.trim(), type:"other"});
-      saveState();
-      renderMainArea();
+      openQuickAddBagModal(trip, btn.dataset.quickaddbag);
     });
   });
   mainArea.querySelectorAll("[data-bagkey]").forEach(sel=>{
