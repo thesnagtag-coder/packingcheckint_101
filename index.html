@@ -134,16 +134,18 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-
 <header class="top">
   <div>
     <h1>Universal Trip Packing Planner</h1>
-    <p class="tag-sub">Reusable for any destination, any dates, any luggage size.</p>
+    <p class="tag-sub">Reusable for any destination, any dates, any luggage size. <span style="opacity:.55;">Build 2026-09-20-v10</span></p>
   </div>
   <div class="topbar-actions">
     <button class="btn" id="themeToggle">Dark mode</button>
     <button class="btn" id="manageItemsBtn">Manage item list</button>
+    <button class="btn ghost" id="showInfoBtn" style="display:none;">Show info panels</button>
     <button class="btn primary" id="newTripBtn">+ New trip</button>
   </div>
 </header>
 
-<div class="disclaimer" style="margin-bottom:16px;">
+<div class="disclaimer" id="disclaimerBanner" style="margin-bottom:16px;position:relative;padding-right:34px;">
+  <button type="button" id="hideDisclaimerBtn" title="Hide this" style="position:absolute;top:6px;right:8px;background:none;border:none;font-size:1rem;cursor:pointer;color:var(--sub);">&times;</button>
   <strong>Disclaimer:</strong> This tool provides general travel planning guidance only. Climate, customs/dress-code, health and visa/entry information are general references, not a live forecast or legal advice, are not verified for your specific trip, and can change without notice. Always confirm current requirements directly with official sources - the destination's immigration authority, the nearest embassy/consulate, your home country's official travel advisory, and a doctor or travel health clinic for medical/vaccination advice - before you travel. Use of this tool and any packing or travel decisions based on it are at your own responsibility; the creator of this tool is not liable for losses, delays, denied entry, fines, or health outcomes arising from its use.
 </div>
 
@@ -153,7 +155,8 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-
       <h2>Your trips</h2>
       <div id="tripListWrap"></div>
     </div>
-    <div class="panel">
+    <div class="panel" id="howItWorksPanel" style="position:relative;padding-right:34px;">
+      <button type="button" id="hideHowItWorksBtn" title="Hide this" style="position:absolute;top:14px;right:8px;background:none;border:none;font-size:1rem;cursor:pointer;color:var(--sub);">&times;</button>
       <h2>How this works</h2>
       <p class="small-note">1. Create a trip and add each leg (place, country, dates) - climate auto-fills from the country.<br>2. Add each traveler and every bag they're carrying.<br>3. The dashboard builds your checklist and shows general climate + etiquette notes per leg.<br>4. Tick items as you pack and pick which bag each item goes in. Add or remove items any time - your master list is saved for next trip.</p>
     </div>
@@ -275,10 +278,20 @@ const NATIONALITY_ADVISORY_LINKS = {
 const BAG_TYPES = {
   "handbag": {label:"Handbag / personal item", compact:true},
   "computer-bag": {label:"Computer / laptop bag", compact:true},
+  "camera-bag": {label:"Camera bag", compact:true},
+  "fanny-pack": {label:"Fanny pack / bum bag", compact:true},
+  "tote-bag": {label:"Tote bag", compact:true},
+  "toiletry-bag": {label:"Toiletry / wash bag", compact:true},
   "backpack-small": {label:"Small backpack", compact:true},
   "backpack-large": {label:"Large backpack", compact:false},
+  "duffel-bag": {label:"Duffel / gym bag", compact:false},
   "carry-on": {label:"Carry-on suitcase", compact:false},
   "checked": {label:"Checked suitcase", compact:false},
+  "garment-bag": {label:"Garment / suit bag", compact:false},
+  "cooler-bag": {label:"Cooler bag", compact:false},
+  "diaper-bag": {label:"Diaper / baby bag", compact:true},
+  "sports-gear-bag": {label:"Sports / gear bag", compact:false},
+  "stroller-carseat-bag": {label:"Stroller / car seat travel bag", compact:false},
   "other": {label:"Other bag", compact:false}
 };
 
@@ -434,6 +447,32 @@ function applyTheme(){
 document.getElementById("themeToggle").addEventListener("click", ()=>{
   state.theme = state.theme === "dark" ? "light" : "dark";
   saveState(); applyTheme();
+});
+
+/* ---------------------------------------------------------
+   HIDE/SHOW INFO PANELS (disclaimer, how this works)
+--------------------------------------------------------- */
+function applyPanelVisibility(){
+  if(!state.uiPrefs) state.uiPrefs = {};
+  const hideDisclaimer = !!state.uiPrefs.hideDisclaimer;
+  const hideHowItWorks = !!state.uiPrefs.hideHowItWorks;
+  document.getElementById("disclaimerBanner").style.display = hideDisclaimer ? "none" : "";
+  document.getElementById("howItWorksPanel").style.display = hideHowItWorks ? "none" : "";
+  document.getElementById("showInfoBtn").style.display = (hideDisclaimer || hideHowItWorks) ? "" : "none";
+}
+document.getElementById("hideDisclaimerBtn").addEventListener("click", ()=>{
+  if(!state.uiPrefs) state.uiPrefs = {};
+  state.uiPrefs.hideDisclaimer = true;
+  saveState(); applyPanelVisibility();
+});
+document.getElementById("hideHowItWorksBtn").addEventListener("click", ()=>{
+  if(!state.uiPrefs) state.uiPrefs = {};
+  state.uiPrefs.hideHowItWorks = true;
+  saveState(); applyPanelVisibility();
+});
+document.getElementById("showInfoBtn").addEventListener("click", ()=>{
+  state.uiPrefs = {hideDisclaimer:false, hideHowItWorks:false};
+  saveState(); applyPanelVisibility();
 });
 
 /* ---------------------------------------------------------
@@ -911,41 +950,65 @@ function renderMainArea(){
   if(!trip.checked) trip.checked = {};
   if(!trip.bagAssignments) trip.bagAssignments = {};
   const bags = allBags(trip);
-  const bagOptions = `<option value="">Unassigned</option>` + bags.map(b=>`<option value="${escapeAttr(b.id)}">${escapeHtml(b.label)}</option>`).join("");
+  // "Bag" assignment options always include two non-physical choices, since some items (visa approvals,
+  // boarding passes, document copies) aren't packed in a bag at all - they're a phone file or kept separately.
+  const pseudoBags = [
+    {id:"__digital__", label:"Digital file / phone (not packed)"},
+    {id:"__separate__", label:"Kept separately (e.g. document folder)"}
+  ];
+  const bagOptions = `<option value="">Unassigned</option>`
+    + bags.map(b=>`<option value="${escapeAttr(b.id)}">${escapeHtml(b.label)}</option>`).join("")
+    + pseudoBags.map(b=>`<option value="${b.id}">${escapeHtml(b.label)}</option>`).join("");
 
   let totalItems=0, checkedItems=0;
+  function buildRow(key, qty, label, it){
+    const isChecked = !!trip.checked[key];
+    const assignedBag = trip.bagAssignments[key] || "";
+    totalItems++; if(isChecked) checkedItems++;
+    return `<div class="item-row">
+      <input type="checkbox" data-key="${escapeAttr(key)}" ${isChecked?'checked':''}>
+      <span class="qty">${qty}x</span>
+      <span class="name ${isChecked?'checked':''}">${escapeHtml(label)}${it.essential?' <span class="badge outline">essential</span>':''}
+        ${it.note?`<span class="note">${escapeHtml(it.note)}</span>`:''}
+      </span>
+      <select class="bag-select" data-bagkey="${escapeAttr(key)}" style="width:auto;min-width:150px;font-size:.78rem;padding:5px 6px;">${bagOptions.replace(`value="${assignedBag}"`, `value="${assignedBag}" selected`)}</select>
+    </div>`;
+  }
   const categoriesHtml = Object.entries(state.master).map(([cat, items])=>{
     const matched = items.filter(it => it.tags.some(t=>activeTags.has(t)));
     if(!matched.length) return "";
-    const rows = matched.map((it, idx)=>{
-      const key = cat+"::"+it.name;
-      const qty = computeQty(it, trip, totalDays);
-      const isChecked = !!trip.checked[key];
-      const assignedBag = trip.bagAssignments[key] || "";
-      totalItems++; if(isChecked) checkedItems++;
-      return `<div class="item-row">
-        <input type="checkbox" data-key="${escapeAttr(key)}" ${isChecked?'checked':''}>
-        <span class="qty">${qty}x</span>
-        <span class="name ${isChecked?'checked':''}">${escapeHtml(it.name)}${it.essential?' <span class="badge outline">essential</span>':''}
-          ${it.note?`<span class="note">${escapeHtml(it.note)}</span>`:''}
-        </span>
-        ${bags.length?`<select class="bag-select" data-bagkey="${escapeAttr(key)}" style="width:auto;min-width:140px;font-size:.78rem;padding:5px 6px;">${bagOptions.replace(`value="${assignedBag}"`, `value="${assignedBag}" selected`)}</select>`:''}
-      </div>`;
-    }).join("");
-    return `<div class="category-block"><h3>${escapeHtml(cat)}</h3>${rows}</div>`;
+    const rows = [];
+    matched.forEach(it=>{
+      // Per-person items get one row PER TRAVELER (own checkbox + own bag/file assignment) instead of
+      // one combined row - so two different people's visas, passports etc. can be tracked separately.
+      if(it.qtyRule==="perPerson" && trip.travelers && trip.travelers.length){
+        trip.travelers.forEach(tr=>{
+          const key = cat+"::"+it.name+"::"+tr.id;
+          const qty = Math.max(1, Math.round(it.qty));
+          rows.push(buildRow(key, qty, (tr.name||"Traveler")+" - "+it.name, it));
+        });
+      } else {
+        const key = cat+"::"+it.name;
+        const qty = computeQty(it, trip, totalDays);
+        rows.push(buildRow(key, qty, it.name, it));
+      }
+    });
+    return `<div class="category-block"><h3>${escapeHtml(cat)}</h3>${rows.join("")}</div>`;
   }).join("");
 
   const pct = totalItems ? Math.round((checkedItems/totalItems)*100) : 0;
 
   const travelerSummary = (trip.travelers||[]).map(t=>{
     const bagList = (t.bags||[]).map(b=>b.name || (BAG_TYPES[b.type]?BAG_TYPES[b.type].label:"Bag")).join(", ");
-    return `<span class="badge outline">${escapeHtml(t.name||"Traveler")}: ${escapeHtml(bagList)}</span>`;
+    return `<span class="badge outline">${escapeHtml(t.name||"Traveler")}: ${escapeHtml(bagList)} <button type="button" class="rm" data-quickaddbag="${t.id}" title="Add a bag for ${escapeAttr(t.name||'this traveler')}" style="margin-left:4px;">+bag</button></span>`;
   }).join(" ");
 
   mainArea.innerHTML = `
     <div class="panel no-print">
       <button class="btn small" id="editTripBtn">Edit trip details</button>
-      <button class="btn small" id="printBtn">Print / export checklist</button>
+      <button class="btn small" id="printBtn">Print checklist</button>
+      <button class="btn small" id="copyKeepBtn">Copy checklist (for Google Keep)</button>
+      <button class="btn small" id="shareBtn" style="display:none;">Share checklist</button>
       <button class="btn small danger" id="resetCheckBtn">Reset all checks</button>
     </div>
     <div class="panel" style="margin-top:14px;">
@@ -963,18 +1026,35 @@ function renderMainArea(){
       <div class="weather-grid">${weatherHtml}</div>
       ${customsSet.size ? `<div class="disclaimer"><strong>General customs &amp; dress-code notes (verify current rules before travel):</strong><ul style="margin:6px 0 0 18px;padding:0;">${Array.from(customsSet).map(c=>`<li>${escapeHtml(c)}</li>`).join("")}</ul></div>` : ''}
       ${visaCardsHtml ? `<h3 style="margin-top:18px;">Visa &amp; entry - check before you fly</h3><div class="weather-grid">${visaCardsHtml}</div>` : (trip.legs.some(l=>l.country) ? '<p class="small-note">Add a nationality for each traveler above to see visa/entry checklist links per destination.</p>' : '')}
-      <div class="disclaimer">Climate figures are general seasonal averages for planning only, not a forecast. Always check a live weather forecast and current entry/customs requirements closer to your travel date.</div>
-      ${bags.length?'<p class="small-note">Use the dropdown next to each item to choose which bag it goes in.</p>':''}
+      <p class="small-note">Use the dropdown next to each item to choose which bag it goes in, or mark it as a digital file / kept separately.</p>
       ${categoriesHtml || '<p class="small-note">No matching items yet - add some in "Manage item list".</p>'}
     </div>
   `;
 
   document.getElementById("editTripBtn").addEventListener("click", ()=>openTripModal(trip.id));
   document.getElementById("printBtn").addEventListener("click", ()=>window.print());
+  document.getElementById("copyKeepBtn").addEventListener("click", ()=>copyChecklistText(trip));
+  if(navigator.share){
+    const shareBtn = document.getElementById("shareBtn");
+    shareBtn.style.display = "";
+    shareBtn.addEventListener("click", ()=>{
+      navigator.share({title: trip.name, text: buildChecklistText(trip)}).catch(()=>{});
+    });
+  }
   document.getElementById("resetCheckBtn").addEventListener("click", ()=>{
     if(confirm("Uncheck all items for this trip?")){
       trip.checked = {}; saveState(); renderAll();
     }
+  });
+  mainArea.querySelectorAll("[data-quickaddbag]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const name = prompt("New bag label (e.g. Camera bag, Fanny pack):");
+      if(name===null || !name.trim()) return;
+      const t = trip.travelers.find(t=>t.id===btn.dataset.quickaddbag);
+      t.bags.push({id:uid(), name:name.trim(), type:"other"});
+      saveState();
+      renderMainArea();
+    });
   });
   mainArea.querySelectorAll("[data-bagkey]").forEach(sel=>{
     sel.addEventListener("change", ()=>{
@@ -991,11 +1071,56 @@ function renderMainArea(){
   });
 }
 
+// Builds a flat, one-item-per-line checklist. Google Keep has no public API a page like this can call
+// directly, but pasting multi-line text into a new Keep "List" note auto-splits each line into its own
+// checkable item - so "copy" is the practical way to get this into Keep (or Apple Notes, Reminders, etc.)
+function buildChecklistText(trip){
+  const totalDays = trip.legs.reduce((sum,l)=>sum+daysBetween(l.startDate,l.endDate),0) || 1;
+  const activeTags = activeTagsForTrip(trip);
+  const lines = [trip.name, ""];
+  Object.entries(state.master).forEach(([cat, items])=>{
+    const matched = items.filter(it => it.tags.some(t=>activeTags.has(t)));
+    if(!matched.length) return;
+    lines.push(cat.toUpperCase());
+    matched.forEach(it=>{
+      if(it.qtyRule==="perPerson" && trip.travelers && trip.travelers.length){
+        trip.travelers.forEach(tr=>{
+          lines.push((tr.name||"Traveler")+" - "+it.name);
+        });
+      } else {
+        const qty = computeQty(it, trip, totalDays);
+        lines.push((qty>1?qty+"x ":"")+it.name);
+      }
+    });
+    lines.push("");
+  });
+  return lines.join("\n");
+}
+function copyChecklistText(trip){
+  const text = buildChecklistText(trip);
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(()=>{
+      alert("Checklist copied. Open Google Keep, start a new List, and paste - each line becomes its own checkable item.");
+    }).catch(()=>{ fallbackCopy(text); });
+  } else {
+    fallbackCopy(text);
+  }
+}
+function fallbackCopy(text){
+  const ta = document.createElement("textarea");
+  ta.value = text; ta.style.position="fixed"; ta.style.opacity="0";
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand("copy"); alert("Checklist copied. Paste it into a new Google Keep List."); }
+  catch(e){ prompt("Copy this text manually:", text); }
+  document.body.removeChild(ta);
+}
+
 function escapeHtml(s){ return (s||"").toString().replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
 function escapeAttr(s){ return escapeHtml(s); }
 
 function renderAll(){
   applyTheme();
+  applyPanelVisibility();
   renderTripList();
   renderMainArea();
 }
