@@ -1,0 +1,1295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Packing Planner">
+<meta name="theme-color" content="#f7f6f2">
+<title>Universal Trip Packing Planner</title>
+<style>
+:root{
+  --bg:#f7f6f2; --panel:#ffffff; --ink:#1f2430; --sub:#5b6270; --line:#e4e1d8;
+  --accent:#7a6148; --accent-ink:#ffffff; --warn:#b5651d; --chip:#efece5;
+  --danger:#a4342a; --shadow:0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+  --radius:14px;
+}
+[data-theme="dark"]{
+  --bg:#14161c; --panel:#1c1f27; --ink:#eef0f4; --sub:#a2a8b5; --line:#2b2f3a;
+  --accent:#c2a179; --accent-ink:#1c140c; --warn:#e0a24a; --chip:#26221c;
+  --danger:#e2685c; --shadow:0 1px 3px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.45;}
+.wrap{max-width:1180px;margin:0 auto;padding:20px 16px 80px;}
+header.top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:18px;}
+h1{font-size:1.5rem;margin:0 0 4px;}
+.tag-sub{color:var(--sub);font-size:.9rem;margin:0;}
+.btn{border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:8px 14px;border-radius:10px;font-size:.85rem;cursor:pointer;font-weight:600;}
+.btn:hover{border-color:var(--accent);}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);}
+.btn.danger{color:var(--danger);border-color:var(--danger);background:transparent;}
+.btn.ghost{background:transparent;}
+.btn.small{padding:5px 10px;font-size:.78rem;}
+.topbar-actions{display:flex;gap:8px;flex-wrap:wrap;}
+
+.layout{display:grid;grid-template-columns:260px 1fr;gap:18px;align-items:start;}
+@media(max-width:860px){.layout{grid-template-columns:1fr;}}
+
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);}
+.panel + .panel{margin-top:14px;}
+.panel h2{font-size:1rem;margin:0 0 10px;}
+.panel h3{font-size:.85rem;margin:14px 0 6px;color:var(--sub);text-transform:uppercase;letter-spacing:.04em;}
+
+.trip-list-item{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-radius:10px;cursor:pointer;font-size:.88rem;gap:6px;}
+.trip-list-item:hover{background:var(--chip);}
+.trip-list-item.active{background:var(--accent);color:var(--accent-ink);}
+.trip-list-item .x{opacity:.6;font-size:.75rem;padding:2px 6px;border-radius:6px;}
+.trip-list-item .x:hover{opacity:1;background:rgba(0,0,0,.15);}
+
+label{display:block;font-size:.78rem;color:var(--sub);margin-bottom:3px;margin-top:8px;font-weight:600;}
+input,select,textarea{width:100%;padding:10px 9px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-size:16px;font-family:inherit;}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:1px;}
+
+.leg-card{border:1px solid var(--line);border-radius:10px;padding:10px;margin-top:8px;background:var(--bg);}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.leg-card .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+.leg-remove{float:right;font-size:.72rem;color:var(--danger);cursor:pointer;background:none;border:none;font-weight:700;}
+
+.dash-header{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px;}
+.progress-wrap{flex:1;min-width:180px;}
+.progress-bar{height:10px;background:var(--chip);border-radius:6px;overflow:hidden;}
+.progress-fill{height:100%;background:var(--accent);transition:width .2s;}
+.progress-label{font-size:.75rem;color:var(--sub);margin-top:4px;}
+
+.weather-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;margin-bottom:16px;}
+.weather-card{background:var(--chip);border-radius:12px;padding:12px;font-size:.82rem;}
+.weather-card h4{margin:0 0 4px;font-size:.92rem;}
+.weather-card .dates{color:var(--sub);font-size:.75rem;margin-bottom:6px;}
+.weather-card .temps{font-weight:700;margin-bottom:4px;}
+.weather-card .note{color:var(--sub);}
+.badge{display:inline-block;font-size:.68rem;font-weight:700;padding:2px 7px;border-radius:20px;background:var(--accent);color:var(--accent-ink);margin:2px 4px 0 0;}
+.badge.warn{background:var(--warn);color:#2a1a05;}
+.badge.outline{background:transparent;border:1px solid var(--line);color:var(--sub);}
+
+.disclaimer{font-size:.72rem;color:var(--sub);background:var(--chip);border-radius:10px;padding:8px 10px;margin-bottom:16px;}
+.collapsible-section{margin-bottom:14px;}
+.collapsible-section summary{cursor:pointer;font-weight:600;font-size:.88rem;padding:8px 10px;background:var(--chip);border-radius:10px;list-style:none;color:var(--ink);}
+.collapsible-section summary::-webkit-details-marker{display:none;}
+.collapsible-section summary::before{content:"▸ ";display:inline-block;color:var(--sub);}
+.collapsible-section[open] summary::before{content:"▾ ";}
+.collapsible-section[open] summary{border-radius:10px 10px 0 0;}
+
+.category-block{margin-bottom:16px;}
+.category-block h3{display:flex;justify-content:space-between;align-items:center;font-size:.95rem;text-transform:none;letter-spacing:0;color:var(--ink);border-bottom:1px solid var(--line);padding-bottom:6px;margin-bottom:8px;}
+.item-row{display:flex;align-items:flex-start;gap:10px;padding:6px 2px;border-radius:8px;flex-wrap:wrap;}
+.item-row .bag-select{margin-left:auto;}
+.item-row:hover{background:var(--chip);}
+.item-row input[type=checkbox]{width:18px;height:18px;margin-top:2px;flex-shrink:0;accent-color:var(--accent);}
+.item-row .qty{font-weight:700;min-width:34px;color:var(--accent);}
+.item-row .name{flex:1;}
+.item-row .name.checked{text-decoration:line-through;opacity:.5;}
+.item-row .note{font-size:.72rem;color:var(--sub);display:block;}
+.item-row .rm{background:none;border:none;color:var(--sub);cursor:pointer;font-size:.75rem;}
+.item-row .rm:hover{color:var(--danger);}
+
+.empty-state{text-align:center;padding:60px 20px;color:var(--sub);}
+
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:flex-start;justify-content:center;padding:30px 14px;overflow:auto;z-index:50;}
+.modal{background:var(--panel);border-radius:16px;max-width:640px;width:100%;padding:20px;box-shadow:0 10px 40px rgba(0,0,0,.3);}
+.modal h2{margin-top:0;}
+.modal-close{float:right;background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--sub);}
+.manager-item{display:grid;grid-template-columns:1.4fr 1fr 1fr auto;gap:6px;align-items:center;padding:5px 0;border-bottom:1px solid var(--line);font-size:.8rem;}
+.manager-cat{margin-top:16px;}
+.manager-cat h4{margin:0 0 6px;font-size:.88rem;}
+.add-item-form{display:grid;grid-template-columns:1.4fr 1fr 1fr auto;gap:6px;margin-top:8px;}
+.tag-checks{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
+.tag-checks label{display:flex;align-items:center;gap:4px;font-weight:400;font-size:.75rem;color:var(--ink);margin:0;}
+.tag-checks input{width:auto;}
+.foot-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;}
+.small-note{font-size:.72rem;color:var(--sub);}
+@media print{
+  .layout{display:block;}
+  .sidebar,.dash-header .btn,.no-print{display:none !important;}
+  body{background:#fff;color:#000;}
+  .panel{box-shadow:none;border:1px solid #ccc;}
+}
+@media(max-width:600px){
+  .wrap{padding:14px 12px 90px;}
+  h1{font-size:1.25rem;}
+  header.top{flex-direction:column;}
+  .topbar-actions{width:100%;}
+  .topbar-actions .btn{flex:1;min-width:0;}
+  .row2,.row3{grid-template-columns:1fr;}
+  .manager-item{grid-template-columns:1fr;gap:2px;padding:10px 0;}
+  .manager-item .rm{justify-self:start;}
+  .add-item-form{grid-template-columns:1fr;}
+  .modal{padding:16px;border-radius:12px;}
+  .weather-grid{grid-template-columns:1fr;}
+  .item-row{align-items:center;}
+  .btn{padding:10px 14px;}
+  .btn.small{padding:8px 12px;}
+  .dash-header{flex-direction:column;align-items:stretch;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <div>
+    <h1>Universal Trip Packing Planner</h1>
+    <p class="tag-sub">Reusable for any destination, any dates, any luggage size. <span style="opacity:.55;">Build 2026-09-20-v14</span></p>
+  </div>
+  <div class="topbar-actions">
+    <button class="btn" id="themeToggle">Dark mode</button>
+    <button class="btn" id="manageItemsBtn">Manage item list</button>
+    <button class="btn ghost" id="showInfoBtn" style="display:none;">Show info panels</button>
+    <button class="btn primary" id="newTripBtn">+ New trip</button>
+  </div>
+</header>
+
+<div class="disclaimer" id="disclaimerBanner" style="margin-bottom:16px;position:relative;padding-right:34px;">
+  <button type="button" id="hideDisclaimerBtn" title="Hide this" style="position:absolute;top:6px;right:8px;background:none;border:none;font-size:1rem;cursor:pointer;color:var(--sub);">&times;</button>
+  <strong>Disclaimer:</strong> This tool provides general travel planning guidance only. Climate, customs/dress-code, health and visa/entry information are general references, not a live forecast or legal advice, are not verified for your specific trip, and can change without notice. Always confirm current requirements directly with official sources - the destination's immigration authority, the nearest embassy/consulate, your home country's official travel advisory, and a doctor or travel health clinic for medical/vaccination advice - before you travel. Use of this tool and any packing or travel decisions based on it are at your own responsibility; the creator of this tool is not liable for losses, delays, denied entry, fines, or health outcomes arising from its use.
+</div>
+
+<div class="layout">
+  <div class="sidebar">
+    <div class="panel">
+      <h2>Your trips</h2>
+      <div id="tripListWrap"></div>
+    </div>
+    <div class="panel" id="howItWorksPanel" style="position:relative;padding-right:34px;">
+      <button type="button" id="hideHowItWorksBtn" title="Hide this" style="position:absolute;top:14px;right:8px;background:none;border:none;font-size:1rem;cursor:pointer;color:var(--sub);">&times;</button>
+      <h2>How this works</h2>
+      <p class="small-note">1. Create a trip and add each leg (place, country, dates) - climate auto-fills from the country.<br>2. Add each traveler and every bag they're carrying.<br>3. The dashboard builds your checklist and shows general climate + etiquette notes per leg.<br>4. Tick items as you pack and pick which bag each item goes in. Add or remove items any time - your master list is saved for next trip.</p>
+    </div>
+  </div>
+
+  <div id="mainArea">
+    <div class="empty-state panel" id="emptyState">
+      <p>No trip selected yet.</p>
+      <button class="btn primary" id="emptyNewTripBtn">Create your first trip</button>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<div id="modalRoot"></div>
+
+<script>
+/* ---------------------------------------------------------
+   DATA: climate zones, preset destinations, master item list
+--------------------------------------------------------- */
+
+const CLIMATE_ZONES = {
+  "tropical-coastal": {
+    label: "Tropical coastal",
+    tags: ["hot","humid","tropical","beach"],
+  },
+  "hot-desert": {
+    label: "Hot desert / arid",
+    tags: ["hot","dry","desert"],
+  },
+  "temperate": {
+    label: "Temperate",
+    tags: ["mild"],
+  },
+  "cold": {
+    label: "Cold / alpine",
+    tags: ["cold"],
+  },
+  "mediterranean": {
+    label: "Mediterranean",
+    tags: ["mild","dry"],
+  }
+};
+
+// Month index 0=Jan ... 11=Dec. Seasonal notes are general long-term averages for planning only.
+// No named-destination presets ship by default (keeps the file free of any specific trip/location data).
+// Pick a climate zone per leg instead - the checklist and generic notes below adapt automatically.
+const PRESET_DESTINATIONS = {};
+
+// Generic zone templates for any custom destination the user adds
+const ZONE_TEMPLATES = {
+  "tropical-coastal": {tempC:"24-32", tempF:"75-90", note:"Warm/hot and humid; check current rainy vs dry season for your exact dates."},
+  "hot-desert": {tempC:"20-40", tempF:"68-104", note:"Hot days, can be much cooler at night; very low rainfall."},
+  "temperate": {tempC:"10-22", tempF:"50-72", note:"Mild, variable - pack layers."},
+  "cold": {tempC:"-5-10", tempF:"23-50", note:"Cold - insulated layers and weatherproofing recommended."},
+  "mediterranean": {tempC:"15-30", tempF:"59-86", note:"Warm dry summers, mild wetter winters."}
+};
+
+// Country -> climate zone lookup. This is general geography (stable, evergreen), not tied to any
+// specific person's trip. Typing a country auto-fills the climate zone; the traveler still confirms
+// modest-dress/malaria settings manually since those vary by region and change over time.
+const COUNTRY_CLIMATE_DB = {
+  "tanzania":"tropical-coastal","zanzibar":"tropical-coastal","kenya":"tropical-coastal","maldives":"tropical-coastal",
+  "seychelles":"tropical-coastal","mauritius":"tropical-coastal","thailand":"tropical-coastal","indonesia":"tropical-coastal",
+  "bali":"tropical-coastal","philippines":"tropical-coastal","malaysia":"tropical-coastal","sri lanka":"tropical-coastal",
+  "vietnam":"tropical-coastal","cambodia":"tropical-coastal","fiji":"tropical-coastal","jamaica":"tropical-coastal",
+  "dominican republic":"tropical-coastal","mexico":"tropical-coastal","brazil":"tropical-coastal","singapore":"tropical-coastal",
+  "united arab emirates":"hot-desert","uae":"hot-desert","dubai":"hot-desert","abu dhabi":"hot-desert",
+  "saudi arabia":"hot-desert","qatar":"hot-desert","oman":"hot-desert","kuwait":"hot-desert","bahrain":"hot-desert",
+  "egypt":"hot-desert","jordan":"hot-desert","morocco":"hot-desert","namibia":"hot-desert","arizona":"hot-desert",
+  "united kingdom":"temperate","uk":"temperate","ireland":"temperate","netherlands":"temperate","belgium":"temperate",
+  "germany":"temperate","france":"temperate","poland":"temperate","new zealand":"temperate","south korea":"temperate",
+  "japan":"temperate","china":"temperate","turkey":"temperate","argentina":"temperate",
+  "norway":"cold","sweden":"cold","finland":"cold","iceland":"cold","canada":"cold","russia":"cold","switzerland":"cold",
+  "austria":"cold","alaska":"cold",
+  "spain":"mediterranean","italy":"mediterranean","greece":"mediterranean","portugal":"mediterranean",
+  "croatia":"mediterranean","cyprus":"mediterranean","malta":"mediterranean","israel":"mediterranean",
+  "south africa":"mediterranean","california":"mediterranean","australia":"mediterranean"
+};
+// Countries where modest dress is well-established as a general public expectation. Kept short and
+// conservative on purpose - always shown as a suggestion the traveler confirms, never asserted as law.
+const MODEST_DRESS_COUNTRIES = new Set([
+  "united arab emirates","uae","dubai","abu dhabi","saudi arabia","qatar","oman","kuwait","bahrain",
+  "iran","egypt","jordan","morocco","tanzania","zanzibar","indonesia","malaysia","pakistan","afghanistan"
+]);
+function lookupCountry(name){
+  const key = (name||"").trim().toLowerCase();
+  if(!key) return null;
+  return {
+    climateZone: COUNTRY_CLIMATE_DB[key] || null,
+    modestDress: MODEST_DRESS_COUNTRIES.has(key)
+  };
+}
+
+// Nationality -> official home-government travel-advisory site. These are stable official government
+// domains (not visa rules themselves) - used to point travelers to a live, authoritative source rather
+// than guessing entry/visa requirements, which change constantly and depend on the exact nationality +
+// destination pairing.
+const NATIONALITY_ADVISORY_LINKS = {
+  "south african": {label:"South Africa - DIRCO travel advice", url:"https://www.dirco.gov.za/"},
+  "american": {label:"USA - travel.state.gov", url:"https://travel.state.gov/"},
+  "british": {label:"UK - gov.uk foreign travel advice", url:"https://www.gov.uk/foreign-travel-advice"},
+  "canadian": {label:"Canada - travel.gc.ca", url:"https://travel.gc.ca/"},
+  "australian": {label:"Australia - smartraveller.gov.au", url:"https://www.smartraveller.gov.au/"},
+  "new zealander": {label:"New Zealand - safetravel.govt.nz", url:"https://www.safetravel.govt.nz/"},
+  "irish": {label:"Ireland - dfa.ie travel advice", url:"https://www.dfa.ie/travel/travel-advice/"},
+  "german": {label:"Germany - Auswärtiges Amt travel advice", url:"https://www.auswaertiges-amt.de/en/reiseundsicherheit"},
+  "french": {label:"France - France Diplomatie", url:"https://www.diplomatie.gouv.fr/en/french-foreign-policy/travel-advice/"},
+  "indian": {label:"India - MEA travel advisory", url:"https://www.mea.gov.in/travel-advisory.htm"},
+  "emirati": {label:"UAE - MOFA travel advisory", url:"https://www.mofa.gov.ae/"},
+  "dutch": {label:"Netherlands - nederlandwereldwijd.nl", url:"https://www.nederlandwereldwijd.nl/reizen"},
+  "singaporean": {label:"Singapore - MFA travel advisory", url:"https://www.mfa.gov.sg/"},
+  "kenyan": {label:"Kenya - MFA travel advisory", url:"https://www.mfa.go.ke/"},
+  "nigerian": {label:"Nigeria - MFA travel advisory", url:"https://www.foreignaffairs.gov.ng/"}
+};
+
+// Bag types travelers can carry. "compact" ones drive the "pack light / space-limited" checklist logic.
+const BAG_TYPES = {
+  "handbag": {label:"Handbag / personal item", compact:true},
+  "computer-bag": {label:"Computer / laptop bag", compact:true},
+  "camera-bag": {label:"Camera bag", compact:true},
+  "fanny-pack": {label:"Fanny pack / bum bag", compact:true},
+  "tote-bag": {label:"Tote bag", compact:true},
+  "toiletry-bag": {label:"Toiletry / wash bag", compact:true},
+  "backpack-small": {label:"Small backpack", compact:true},
+  "backpack-large": {label:"Large backpack", compact:false},
+  "duffel-bag": {label:"Duffel / gym bag", compact:false},
+  "carry-on": {label:"Carry-on suitcase", compact:false},
+  "checked": {label:"Checked suitcase", compact:false},
+  "garment-bag": {label:"Garment / suit bag", compact:false},
+  "cooler-bag": {label:"Cooler bag", compact:false},
+  "diaper-bag": {label:"Diaper / baby bag", compact:true},
+  "sports-gear-bag": {label:"Sports / gear bag", compact:false},
+  "stroller-carseat-bag": {label:"Stroller / car seat travel bag", compact:false},
+  "other": {label:"Other bag", compact:false}
+};
+
+// Master item database. qtyRule: fixed | perDay | perPerson | perTrip
+// tags used for filtering: climate tags (hot,humid,tropical,dry,desert,cold,mild,beach), activity tags (snorkel,city), special (modest,malaria,space-limited)
+const DEFAULT_MASTER = {
+  "Documents & Money": [
+    {name:"Passport (valid 6+ months)", qtyRule:"perPerson", qty:1, tags:["always"], essential:true},
+    {name:"Visa / entry documents", qtyRule:"perPerson", qty:1, tags:["always"], essential:true},
+    {name:"Travel insurance details", qtyRule:"perTrip", qty:1, tags:["always"], essential:true},
+    {name:"Boarding passes / e-tickets", qtyRule:"perTrip", qty:1, tags:["always"], essential:true},
+    {name:"Hotel / accommodation confirmations", qtyRule:"perTrip", qty:1, tags:["always"], essential:true},
+    {name:"Driver's licence / IDP (if driving)", qtyRule:"perPerson", qty:1, tags:["always"], essential:false},
+    {name:"Local currency cash (small notes)", qtyRule:"perTrip", qty:1, tags:["always"], essential:true},
+    {name:"Payment cards + backup card", qtyRule:"perPerson", qty:1, tags:["always"], essential:true},
+    {name:"Photocopies / photos of key documents", qtyRule:"perTrip", qty:1, tags:["always"], essential:false},
+    {name:"Emergency contacts list", qtyRule:"perTrip", qty:1, tags:["always"], essential:false}
+  ],
+  "Health & Medication": [
+    {name:"Required/recommended vaccinations or preventive medication (confirm via travel health clinic)", qtyRule:"perTrip", qty:1, tags:["healthrisk"], essential:true, note:"Check an official travel health advisory (WHO, your national travel health service, or a travel clinic) for your specific destination and dates - requirements vary by region and change over time."},
+    {name:"Malaria medication (full course, if applicable to your route)", qtyRule:"perPerson", qty:1, tags:["healthrisk"], essential:false, note:"Only relevant if your destination has malaria risk - confirm with a doctor or travel clinic."},
+    {name:"Personal / prescription medication", qtyRule:"perTrip", qty:1, tags:["always"], essential:true},
+    {name:"Anti-mosquito wrist bands", qtyRule:"perPerson", qty:1, tags:["healthrisk","tropical","humid"], essential:false},
+    {name:"Anti-mosquito repellent cream/spray", qtyRule:"perTrip", qty:1, tags:["healthrisk","tropical","humid"], essential:true},
+    {name:"Mini first-aid kit (plasters, antiseptic, pain relief)", qtyRule:"perTrip", qty:1, tags:["always"], essential:true},
+    {name:"Hand sanitizer", qtyRule:"perTrip", qty:1, tags:["always"], essential:false},
+    {name:"Rehydration salts", qtyRule:"perTrip", qty:1, tags:["hot","tropical","desert"], essential:false},
+    {name:"Motion sickness tablets", qtyRule:"perTrip", qty:1, tags:["always"], essential:false},
+    {name:"Sunscreen SPF50", qtyRule:"perPerson", qty:1, tags:["hot","tropical","beach","desert"], essential:true},
+    {name:"After-sun / aloe gel", qtyRule:"perTrip", qty:1, tags:["hot","tropical","beach"], essential:false}
+  ],
+  "Toiletries": [
+    {name:"Shattaf / travel bidet", qtyRule:"perTrip", qty:1, tags:["always"], essential:false},
+    {name:"Toothbrush + toothpaste", qtyRule:"perPerson", qty:1, tags:["always"], essential:true},
+    {name:"Travel-size shampoo/soap", qtyRule:"perPerson", qty:1, tags:["always"], essential:true},
+    {name:"Deodorant", qtyRule:"perPerson", qty:1, tags:["always"], essential:true},
+    {name:"Foldable travel towel", qtyRule:"perPerson", qty:1, tags:["beach","tropical","space-limited"], essential:true},
+    {name:"Wet wipes", qtyRule:"perTrip", qty:1, tags:["always"], essential:false},
+    {name:"Travel tissues", qtyRule:"perTrip", qty:1, tags:["always"], essential:false}
+  ],
+  "Electronics": [
+    {name:"Phone + charger", qtyRule:"perPerson", qty:1, tags:["always"], essential:true},
+    {name:"Universal travel adapter", qtyRule:"perTrip", qty:1, tags:["always"], essential:true},
+    {name:"Power bank", qtyRule:"perTrip", qty:1, tags:["always"], essential:false},
+    {name:"Headphones", qtyRule:"perPerson", qty:1, tags:["always"], essential:false},
+    {name:"Waterproof phone pouch", qtyRule:"perTrip", qty:1, tags:["beach","snorkel"], essential:false},
+    {name:"Camera / action cam", qtyRule:"perTrip", qty:1, tags:["always"], essential:false}
+  ],
+  "Clothing": [
+    {name:"Light breathable tops", qtyRule:"perDay", qty:0.6, tags:["hot","humid","tropical"], essential:true, note:"Roughly 1 per 1.5 days - reuse with quick-dry fabric."},
+    {name:"Shorts / light trousers", qtyRule:"perDay", qty:0.4, tags:["hot","humid","tropical","desert"], essential:true},
+    {name:"Sleepwear", qtyRule:"perPerson", qty:1, tags:["always"], essential:true},
+    {name:"Underwear", qtyRule:"perDay", qty:1, tags:["always"], essential:true},
+    {name:"Socks", qtyRule:"perDay", qty:0.7, tags:["always"], essential:true},
+    {name:"Swimwear (2 sets to rotate)", qtyRule:"fixed", qty:2, tags:["beach","tropical"], essential:true},
+    {name:"Cover-up / sarong (for modest areas)", qtyRule:"perPerson", qty:1, tags:["modest","beach"], essential:true},
+    {name:"Light jacket / layer (AC, evenings, flights)", qtyRule:"perPerson", qty:1, tags:["always"], essential:true},
+    {name:"Comfortable walking shoes", qtyRule:"perPerson", qty:1, tags:["always"], essential:true},
+    {name:"Sandals / flip-flops", qtyRule:"perPerson", qty:1, tags:["beach","hot","tropical"], essential:true},
+    {name:"Sun hat / cap", qtyRule:"perPerson", qty:1, tags:["hot","tropical","desert","beach"], essential:false},
+    {name:"Sunglasses", qtyRule:"perPerson", qty:1, tags:["hot","tropical","desert","beach"], essential:false},
+    {name:"Scarf / shawl (shoulders cover)", qtyRule:"perPerson", qty:1, tags:["modest"], essential:true},
+    {name:"Longer skirt or trousers for city/village visits", qtyRule:"perPerson", qty:1, tags:["modest"], essential:false}
+  ],
+  "Beach & Snorkeling": [
+    {name:"Snorkel mask + breathing tube (snorkel)", qtyRule:"perPerson", qty:1, tags:["snorkel","beach"], essential:true},
+    {name:"Reef-safe sunscreen", qtyRule:"perTrip", qty:1, tags:["snorkel","beach"], essential:true},
+    {name:"Rash vest / swim shirt", qtyRule:"perPerson", qty:1, tags:["snorkel","beach"], essential:false},
+    {name:"Dry bag", qtyRule:"perTrip", qty:1, tags:["snorkel","beach"], essential:false},
+    {name:"Snorkeling fins", qtyRule:"perPerson", qty:1, tags:["snorkel"], essential:false}
+  ],
+  "Comfort & Travel": [
+    {name:"Neck pillow", qtyRule:"perPerson", qty:1, tags:["always"], essential:false},
+    {name:"Earplugs / eye mask", qtyRule:"perPerson", qty:1, tags:["always"], essential:false},
+    {name:"Reusable water bottle", qtyRule:"perPerson", qty:1, tags:["always"], essential:true},
+    {name:"Foldable day bag", qtyRule:"perPerson", qty:1, tags:["always","space-limited"], essential:true},
+    {name:"Small padlock", qtyRule:"perTrip", qty:1, tags:["always"], essential:false},
+    {name:"Laundry bag / detergent sheets", qtyRule:"perTrip", qty:1, tags:["space-limited"], essential:false, note:"Recommended when packing light for a longer trip."},
+    {name:"Travel snacks", qtyRule:"perTrip", qty:1, tags:["always"], essential:false}
+  ],
+  "Visa & Entry": [
+    {name:"Visa/entry requirement checked via official source (see Visa & Entry section above)", qtyRule:"perPerson", qty:1, tags:["always"], essential:true},
+    {name:"Visa or e-visa approval printed/saved offline", qtyRule:"perPerson", qty:1, tags:["always"], essential:false},
+    {name:"Small cash for possible arrival/exit fees (amount confirmed via official source)", qtyRule:"perTrip", qty:1, tags:["always"], essential:false},
+    {name:"Passport validity (6+ months) and blank pages checked for destination rules", qtyRule:"perPerson", qty:1, tags:["always"], essential:true},
+    {name:"Proof of onward/return travel (if required by destination)", qtyRule:"perPerson", qty:1, tags:["always"], essential:false},
+    {name:"Proof of accommodation booking (if required by destination)", qtyRule:"perPerson", qty:1, tags:["always"], essential:false}
+  ]
+};
+
+/* ---------------------------------------------------------
+   STATE
+--------------------------------------------------------- */
+const STORAGE_KEY = "snagtag_packing_planner_v1";
+let state = loadState();
+saveState();
+let activeTripId = state.trips.length ? state.trips[0].id : null;
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      const parsed = JSON.parse(raw);
+      if(!parsed.master) parsed.master = JSON.parse(JSON.stringify(DEFAULT_MASTER));
+      // Migrate old "malaria" tag (too narrow) to the broader "healthrisk" tag on any saved custom items.
+      Object.values(parsed.master).forEach(items=>{
+        items.forEach(it=>{
+          if(Array.isArray(it.tags)){
+            it.tags = it.tags.map(tg=>tg==="malaria"?"healthrisk":tg);
+          }
+        });
+      });
+      if(!parsed.trips) parsed.trips = [];
+      if(!parsed.theme) parsed.theme = "light";
+      // One-time cleanup: remove any leftover trip from an earlier test build (old browser storage, not this file).
+      parsed.trips = parsed.trips.filter(t => !/example/i.test(t.name||""));
+      // Migrate old trip shape (travelers: number, luggage: string) to travelers[]+bags[].
+      parsed.trips.forEach(t=>{
+        if(!Array.isArray(t.travelers)){
+          const count = t.travelers || 1;
+          const bagType = t.luggage || "backpack-small";
+          const newTravelers = [];
+          for(let i=0;i<count;i++){
+            newTravelers.push({id:uid(), name:count>1?("Traveler "+(i+1)):"Traveler", bags:[{id:uid(), name:BAG_TYPES[bagType]?BAG_TYPES[bagType].label:"Bag", type:bagType}]});
+          }
+          t.travelers = newTravelers;
+          delete t.luggage;
+        }
+        if(!t.bagAssignments) t.bagAssignments = {};
+        t.travelers.forEach(tr=>{ if(tr.nationality===undefined) tr.nationality=""; });
+        (t.legs||[]).forEach(leg=>{
+          if(leg.healthRisk===undefined) leg.healthRisk = !!leg.malariaRisk;
+          delete leg.malariaRisk;
+        });
+      });
+      return parsed;
+    }
+  }catch(e){}
+  return {master: JSON.parse(JSON.stringify(DEFAULT_MASTER)), trips: [], theme:"light"};
+}
+function saveState(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){}
+}
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+/* ---------------------------------------------------------
+   THEME
+--------------------------------------------------------- */
+function applyTheme(){
+  document.documentElement.setAttribute("data-theme", state.theme);
+  document.getElementById("themeToggle").textContent = state.theme === "dark" ? "Light mode" : "Dark mode";
+}
+document.getElementById("themeToggle").addEventListener("click", ()=>{
+  state.theme = state.theme === "dark" ? "light" : "dark";
+  saveState(); applyTheme();
+});
+
+/* ---------------------------------------------------------
+   HIDE/SHOW INFO PANELS (disclaimer, how this works)
+--------------------------------------------------------- */
+function applyPanelVisibility(){
+  if(!state.uiPrefs) state.uiPrefs = {};
+  const hideDisclaimer = !!state.uiPrefs.hideDisclaimer;
+  const hideHowItWorks = !!state.uiPrefs.hideHowItWorks;
+  document.getElementById("disclaimerBanner").style.display = hideDisclaimer ? "none" : "";
+  document.getElementById("howItWorksPanel").style.display = hideHowItWorks ? "none" : "";
+  document.getElementById("showInfoBtn").style.display = (hideDisclaimer || hideHowItWorks) ? "" : "none";
+}
+document.getElementById("hideDisclaimerBtn").addEventListener("click", ()=>{
+  if(!state.uiPrefs) state.uiPrefs = {};
+  state.uiPrefs.hideDisclaimer = true;
+  saveState(); applyPanelVisibility();
+});
+document.getElementById("hideHowItWorksBtn").addEventListener("click", ()=>{
+  if(!state.uiPrefs) state.uiPrefs = {};
+  state.uiPrefs.hideHowItWorks = true;
+  saveState(); applyPanelVisibility();
+});
+document.getElementById("showInfoBtn").addEventListener("click", ()=>{
+  state.uiPrefs = {hideDisclaimer:false, hideHowItWorks:false};
+  saveState(); applyPanelVisibility();
+});
+
+/* ---------------------------------------------------------
+   TRIP LIST / SIDEBAR
+--------------------------------------------------------- */
+function renderTripList(){
+  const wrap = document.getElementById("tripListWrap");
+  if(!state.trips.length){
+    wrap.innerHTML = '<p class="small-note">No trips yet.</p>';
+    return;
+  }
+  wrap.innerHTML = state.trips.map(t=>`
+    <div class="trip-list-item ${t.id===activeTripId?'active':''}" data-id="${t.id}">
+      <span>${escapeHtml(t.name)}</span>
+      <span class="x" data-del="${t.id}" title="Delete trip">&times;</span>
+    </div>
+  `).join("");
+  wrap.querySelectorAll(".trip-list-item").forEach(el=>{
+    el.addEventListener("click", (e)=>{
+      if(e.target.dataset.del) return;
+      activeTripId = el.dataset.id;
+      renderAll();
+    });
+  });
+  wrap.querySelectorAll("[data-del]").forEach(el=>{
+    el.addEventListener("click",(e)=>{
+      e.stopPropagation();
+      const id = el.dataset.del;
+      if(confirm("Delete this trip? This cannot be undone.")){
+        state.trips = state.trips.filter(t=>t.id!==id);
+        if(activeTripId===id) activeTripId = state.trips.length ? state.trips[0].id : null;
+        saveState(); renderAll();
+      }
+    });
+  });
+}
+
+/* ---------------------------------------------------------
+   TRIP EDIT MODAL (create / edit)
+--------------------------------------------------------- */
+function openTripModal(tripId){
+  const editing = !!tripId;
+  const trip = editing ? state.trips.find(t=>t.id===tripId) : {
+    id: uid(), name:"", legs:[], checked:{}, bagAssignments:{},
+    travelers: [
+      {id:uid(), name:"", bags:[{id:uid(), name:"", type:"backpack-small"}]},
+      {id:uid(), name:"", bags:[{id:uid(), name:"", type:"backpack-small"}]}
+    ]
+  };
+  const root = document.getElementById("modalRoot");
+
+  function legHtml(leg, idx){
+    const zoneOptions = Object.entries(CLIMATE_ZONES).map(([k,v])=>`<option value="${k}" ${leg.climateZone===k?'selected':''}>${v.label}</option>`).join("");
+    return `
+    <div class="leg-card" data-leg="${leg.id}">
+      <button type="button" class="leg-remove" data-remove-leg="${leg.id}">Remove leg</button>
+      <div class="row2">
+        <div>
+          <label>Place name</label>
+          <input type="text" data-field="place" value="${escapeAttr(leg.place||'')}" placeholder="e.g. Coastal Resort Town">
+        </div>
+        <div>
+          <label>Country</label>
+          <input type="text" data-field="country" value="${escapeAttr(leg.country||'')}" placeholder="e.g. Country name">
+        </div>
+      </div>
+      <div class="row2">
+        <div>
+          <label>Arrival date</label>
+          <input type="date" data-field="startDate" value="${leg.startDate||''}">
+        </div>
+        <div>
+          <label>Departure date</label>
+          <input type="date" data-field="endDate" value="${leg.endDate||''}">
+        </div>
+      </div>
+      <label>Climate zone <span class="small-note" style="display:inline;">(auto-filled from country, or pick manually)</span></label>
+      <select data-field="climateZone">${zoneOptions}</select>
+      <div class="tag-checks">
+        <label><input type="checkbox" data-field="modestDress" ${leg.modestDress?'checked':''}> Modest dress expected</label>
+        <label><input type="checkbox" data-field="healthRisk" ${leg.healthRisk?'checked':''}> Health precautions likely (vaccinations, malaria, altitude, etc.)</label>
+        <label><input type="checkbox" data-field="beach" ${leg.beach!==false?'checked':''}> Beach / swim activities</label>
+        <label><input type="checkbox" data-field="snorkel" ${leg.snorkel?'checked':''}> Snorkeling planned</label>
+      </div>
+      <p class="small-note">Health requirements vary by region and change over time - confirm with a doctor, travel clinic, or an official travel health advisory (e.g. WHO, or your own country's travel health service) for your specific destination before you travel.</p>
+    </div>`;
+  }
+
+  function bagTypeOptions(type){
+    return Object.entries(BAG_TYPES).map(([k,v])=>`<option value="${k}" ${type===k?'selected':''}>${v.label}</option>`).join("");
+  }
+  function travelerHtml(t){
+    return `
+    <div class="leg-card" data-traveler="${t.id}">
+      <button type="button" class="leg-remove" data-remove-traveler="${t.id}">Remove traveler</button>
+      <div class="row2">
+        <div>
+          <label>Traveler name</label>
+          <input type="text" data-tfield="name" value="${escapeAttr(t.name||'')}" placeholder="e.g. You">
+        </div>
+        <div>
+          <label>Nationality (passport)</label>
+          <input type="text" data-tfield="nationality" value="${escapeAttr(t.nationality||'')}" placeholder="e.g. South African" list="nationalityList">
+        </div>
+      </div>
+      <label>Bags</label>
+      ${t.bags.map(b=>`
+        <div class="row2" data-bag="${b.id}" style="margin-bottom:6px;align-items:end;">
+          <input type="text" data-bfield="name" value="${escapeAttr(b.name||'')}" placeholder="Bag label">
+          <div style="display:flex;gap:6px;">
+            <select data-bfield="type" style="flex:1;">${bagTypeOptions(b.type)}</select>
+            <button type="button" class="rm" data-remove-bag="${b.id}" title="Remove bag" style="border:1px solid var(--line);border-radius:8px;padding:0 10px;">&times;</button>
+          </div>
+        </div>
+      `).join("")}
+      <button type="button" class="btn small ghost" data-add-bag="${t.id}">+ Add bag</button>
+    </div>`;
+  }
+
+  root.innerHTML = `
+  <div class="modal-backdrop" id="tripModalBackdrop">
+    <div class="modal">
+      <button class="modal-close" id="closeTripModal">&times;</button>
+      <h2>${editing?'Edit trip':'New trip'}</h2>
+      <datalist id="nationalityList">${Object.keys(NATIONALITY_ADVISORY_LINKS).map(n=>`<option value="${escapeAttr(n)}">`).join("")}</datalist>
+      <label>Trip name</label>
+      <input type="text" id="tripNameInput" value="${escapeAttr(trip.name)}" placeholder="e.g. Summer Beach Trip 2026">
+      <h3>Travelers & bags</h3>
+      <p class="small-note">Add each person and every bag they're carrying. You'll assign items to a specific bag on the dashboard.</p>
+      <div id="travelersWrap">${trip.travelers.map(travelerHtml).join("")}</div>
+      <button type="button" class="btn small" id="addTravelerBtn" style="margin-top:8px;">+ Add traveler</button>
+      <h3>Trip legs</h3>
+      <div id="legsWrap">${trip.legs.map(legHtml).join("")}</div>
+      <button type="button" class="btn small" id="addLegBtn" style="margin-top:8px;">+ Add leg</button>
+      <div class="foot-actions">
+        <button class="btn ghost" id="cancelTripModal">Cancel</button>
+        <button class="btn primary" id="saveTripModal">Save trip</button>
+      </div>
+    </div>
+  </div>`;
+
+  let legs = trip.legs.map(l=>({...l}));
+  let travelers = trip.travelers.map(t=>({...t, bags: t.bags.map(b=>({...b}))}));
+
+  function renderTravelers(){
+    document.getElementById("travelersWrap").innerHTML = travelers.map(travelerHtml).join("");
+    bindTravelerEvents();
+  }
+  function bindTravelerEvents(){
+    document.querySelectorAll("[data-remove-traveler]").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        if(travelers.length<=1){ alert("A trip needs at least one traveler."); return; }
+        travelers = travelers.filter(t=>t.id!==btn.dataset.removeTraveler);
+        renderTravelers();
+      });
+    });
+    document.querySelectorAll("[data-add-bag]").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const t = travelers.find(t=>t.id===btn.dataset.addBag);
+        t.bags.push({id:uid(), name:"", type:"handbag"});
+        renderTravelers();
+      });
+    });
+    document.querySelectorAll("[data-remove-bag]").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const card = btn.closest("[data-traveler]");
+        const t = travelers.find(t=>t.id===card.dataset.traveler);
+        if(t.bags.length<=1){ alert("Each traveler needs at least one bag."); return; }
+        t.bags = t.bags.filter(b=>b.id!==btn.dataset.removeBag);
+        renderTravelers();
+      });
+    });
+    document.querySelectorAll("[data-traveler]").forEach(card=>{
+      const t = travelers.find(t=>t.id===card.dataset.traveler);
+      card.querySelectorAll("[data-tfield]").forEach(el=>{
+        el.addEventListener("change", ()=>{ t[el.dataset.tfield] = el.value; });
+      });
+      card.querySelectorAll("[data-bag]").forEach(bagRow=>{
+        const b = t.bags.find(b=>b.id===bagRow.dataset.bag);
+        bagRow.querySelectorAll("[data-bfield]").forEach(el=>{
+          el.addEventListener("change", ()=>{ b[el.dataset.bfield] = el.value; });
+        });
+      });
+    });
+  }
+  bindTravelerEvents();
+  document.getElementById("addTravelerBtn").addEventListener("click", ()=>{
+    travelers.push({id:uid(), name:"", bags:[{id:uid(), name:"", type:"handbag"}]});
+    renderTravelers();
+  });
+
+  function renderLegs(){
+    document.getElementById("legsWrap").innerHTML = legs.map(legHtml).join("");
+    bindLegEvents();
+  }
+  function bindLegEvents(){
+    document.querySelectorAll("[data-remove-leg]").forEach(btn=>{
+      btn.addEventListener("click",()=>{
+        legs = legs.filter(l=>l.id!==btn.dataset.removeLeg);
+        renderLegs();
+      });
+    });
+    document.querySelectorAll("#legsWrap .leg-card").forEach(card=>{
+      const id = card.dataset.leg;
+      const leg = legs.find(l=>l.id===id);
+      card.querySelectorAll("[data-field]").forEach(inputEl=>{
+        inputEl.addEventListener("change", ()=>{
+          const f = inputEl.dataset.field;
+          if(inputEl.type==="checkbox") leg[f] = inputEl.checked;
+          else leg[f] = inputEl.value;
+          if(f==="country"){
+            const match = lookupCountry(inputEl.value);
+            if(match){
+              if(match.climateZone) leg.climateZone = match.climateZone;
+              if(match.modestDress) leg.modestDress = true;
+              renderLegs();
+            }
+          }
+        });
+      });
+    });
+  }
+  bindLegEvents();
+
+  document.getElementById("addLegBtn").addEventListener("click", ()=>{
+    legs.push({id:uid(), place:"", country:"", startDate:"", endDate:"", climateZone:"tropical-coastal", modestDress:false, healthRisk:false, beach:false, snorkel:false});
+    renderLegs();
+  });
+
+  function closeModal(){ root.innerHTML=""; }
+  document.getElementById("closeTripModal").addEventListener("click", closeModal);
+  document.getElementById("cancelTripModal").addEventListener("click", closeModal);
+  document.getElementById("tripModalBackdrop").addEventListener("click",(e)=>{ if(e.target.id==="tripModalBackdrop") closeModal(); });
+
+  document.getElementById("saveTripModal").addEventListener("click", ()=>{
+    trip.name = document.getElementById("tripNameInput").value.trim() || "Untitled trip";
+    travelers.forEach((t,i)=>{ if(!t.name.trim()) t.name = "Traveler "+(i+1); });
+    trip.travelers = travelers;
+    trip.legs = legs;
+    if(!trip.checked) trip.checked = {};
+    if(!trip.bagAssignments) trip.bagAssignments = {};
+    if(!editing) state.trips.push(trip);
+    else{
+      const idx = state.trips.findIndex(t=>t.id===trip.id);
+      state.trips[idx] = trip;
+    }
+    activeTripId = trip.id;
+    saveState();
+    closeModal();
+    renderAll();
+  });
+}
+
+document.getElementById("newTripBtn").addEventListener("click", ()=>openTripModal(null));
+document.getElementById("emptyNewTripBtn").addEventListener("click", ()=>openTripModal(null));
+
+/* ---------------------------------------------------------
+   ITEM MANAGER MODAL
+--------------------------------------------------------- */
+const ALL_TAGS = ["always","hot","humid","tropical","dry","desert","cold","mild","beach","snorkel","modest","healthrisk","space-limited"];
+// Plain-language explanation of what each tag does, shown as a legend and as tooltips wherever tags are
+// ticked, so it's clear which checkbox to use and what it changes on the checklist.
+const TAG_HELP = {
+  "always": "Item always shows, on every trip, regardless of destination or activities.",
+  "hot": "Shows when the leg's climate zone is Tropical coastal or Hot desert.",
+  "humid": "Shows when the leg's climate zone is Tropical coastal.",
+  "tropical": "Shows when the leg's climate zone is set to Tropical coastal.",
+  "dry": "Shows when the leg's climate zone is Hot desert or Mediterranean.",
+  "desert": "Shows when the leg's climate zone is set to Hot desert.",
+  "cold": "Shows when the leg's climate zone is set to Cold / alpine.",
+  "mild": "Shows when the leg's climate zone is Temperate or Mediterranean.",
+  "beach": "Shows when a leg has the 'Beach / swim activities' box ticked.",
+  "snorkel": "Shows when a leg has the 'Snorkeling planned' box ticked.",
+  "modest": "Shows when a leg has the 'Modest dress expected' box ticked.",
+  "healthrisk": "Shows when a leg has the 'Health precautions likely' box ticked.",
+  "space-limited": "Shows automatically when every bag on the trip is a compact type (handbag, small backpack, fanny pack, etc) - no box to tick, it works out on its own."
+};
+
+function openQuickAddBagModal(trip, travelerId){
+  const traveler = trip.travelers.find(t=>t.id===travelerId);
+  if(!traveler) return;
+  const root = document.getElementById("modalRoot");
+  const typeOptions = Object.entries(BAG_TYPES).map(([k,v])=>`<option value="${k}">${v.label}</option>`).join("");
+  root.innerHTML = `
+  <div class="modal-backdrop" id="quickBagBackdrop">
+    <div class="modal" style="max-width:380px;">
+      <button class="modal-close" id="closeQuickBagModal">&times;</button>
+      <h2>Add a bag for ${escapeHtml(traveler.name||"this traveler")}</h2>
+      <label>Bag label</label>
+      <input type="text" id="quickBagName" placeholder="e.g. Camera bag, Fanny pack" autofocus>
+      <label>Bag type</label>
+      <select id="quickBagType">${typeOptions}</select>
+      <div class="foot-actions">
+        <button class="btn ghost" id="cancelQuickBag">Cancel</button>
+        <button class="btn primary" id="saveQuickBag">Add bag</button>
+      </div>
+    </div>
+  </div>`;
+  const close = ()=>{ root.innerHTML = ""; };
+  document.getElementById("closeQuickBagModal").addEventListener("click", close);
+  document.getElementById("cancelQuickBag").addEventListener("click", close);
+  document.getElementById("quickBagBackdrop").addEventListener("click", (e)=>{ if(e.target.id==="quickBagBackdrop") close(); });
+  const nameInput = document.getElementById("quickBagName");
+  nameInput.focus();
+  function save(){
+    const name = nameInput.value.trim();
+    if(!name) { nameInput.focus(); return; }
+    const type = document.getElementById("quickBagType").value;
+    traveler.bags.push({id:uid(), name, type});
+    saveState();
+    close();
+    renderMainArea();
+  }
+  document.getElementById("saveQuickBag").addEventListener("click", save);
+  nameInput.addEventListener("keydown", (e)=>{ if(e.key==="Enter") save(); });
+}
+
+function openItemManager(){
+  const root = document.getElementById("modalRoot");
+  function tagChecksHtml(groupAttr, checkedTags){
+    checkedTags = checkedTags || [];
+    return `<div class="tag-checks" data-${groupAttr}>
+      ${ALL_TAGS.map(t=>`<label title="${escapeAttr(TAG_HELP[t]||"")}"><input type="checkbox" value="${t}" ${checkedTags.includes(t)?'checked':''}> ${t}</label>`).join("")}
+    </div>`;
+  }
+  function itemRowHtml(cat, it, idx){
+    const key = cat+"|"+idx;
+    return `
+    <div class="manager-item-edit" data-item="${escapeAttr(key)}" style="border-bottom:1px solid var(--line);padding:8px 0;">
+      <div class="row2">
+        <input type="text" data-ifield="name" value="${escapeAttr(it.name)}" placeholder="Item name">
+        <div style="display:flex;gap:6px;align-items:center;">
+          <select data-ifield="qtyRule" style="flex:1;">
+            <option value="fixed" ${it.qtyRule==='fixed'?'selected':''}>fixed qty</option>
+            <option value="perDay" ${it.qtyRule==='perDay'?'selected':''}>per day</option>
+            <option value="perPerson" ${it.qtyRule==='perPerson'?'selected':''}>per person</option>
+            <option value="perTrip" ${it.qtyRule==='perTrip'?'selected':''}>per trip</option>
+          </select>
+          <input type="text" data-ifield="qty" value="${it.qty}" style="width:60px;" placeholder="qty">
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:4px;">
+        <label style="display:flex;align-items:center;gap:4px;font-weight:400;font-size:.78rem;margin:0;"><input type="checkbox" data-ifield="essential" ${it.essential?'checked':''} style="width:auto;"> essential</label>
+        <input type="text" data-ifield="note" value="${escapeAttr(it.note||'')}" placeholder="Optional note" style="flex:1;font-size:.78rem;padding:4px 6px;">
+        <button class="rm" data-del-item="${escapeAttr(key)}">Remove</button>
+      </div>
+      <details style="margin-top:4px;">
+        <summary class="small-note" style="cursor:pointer;">When this item shows: ${it.tags.join(", ")} (tap to edit)</summary>
+        ${tagChecksHtml('edittags="'+escapeAttr(key)+'"', it.tags)}
+      </details>
+    </div>`;
+  }
+  function catHtml(cat){
+    const items = state.master[cat];
+    return `
+    <details class="collapsible-section manager-cat" data-cat="${escapeAttr(cat)}" open>
+      <summary>${escapeHtml(cat)} <span class="small-note" style="display:inline;">(${items.length})</span></summary>
+      <div style="margin-top:8px;">
+        <button class="btn small ghost" data-del-cat="${escapeAttr(cat)}" style="float:right;">Delete category</button>
+        ${items.map((it,idx)=>itemRowHtml(cat,it,idx)).join("")}
+        <div class="add-item-form" style="margin-top:10px;">
+          <input type="text" placeholder="New item name" data-newname="${escapeAttr(cat)}">
+          <select data-newrule="${escapeAttr(cat)}">
+            <option value="fixed">fixed qty</option>
+            <option value="perDay">per day</option>
+            <option value="perPerson">per person</option>
+            <option value="perTrip">per trip</option>
+          </select>
+          <input type="text" placeholder="qty (e.g. 1)" data-newqty="${escapeAttr(cat)}" value="1">
+          <button class="btn small" data-addbtn="${escapeAttr(cat)}">Add</button>
+        </div>
+        <p class="small-note" style="margin-top:6px;">Tick which trips this new item should show on:</p>
+        ${tagChecksHtml('newtags="'+escapeAttr(cat)+'"')}
+      </div>
+    </details>`;
+  }
+  root.innerHTML = `
+  <div class="modal-backdrop" id="itemModalBackdrop">
+    <div class="modal" style="max-width:760px;">
+      <button class="modal-close" id="closeItemModal">&times;</button>
+      <h2>Manage master item list</h2>
+      <p class="small-note">Changes apply to new checklists. Existing trip checklists keep their current items unless you refresh them.</p>
+      <details class="collapsible-section">
+        <summary>What do the tags (always, hot, humid...) mean?</summary>
+        <div style="margin-top:8px;font-size:.78rem;">
+          ${ALL_TAGS.map(t=>`<div style="padding:4px 0;border-bottom:1px solid var(--line);"><strong>${t}</strong> - ${escapeHtml(TAG_HELP[t]||"")}</div>`).join("")}
+        </div>
+      </details>
+      <div id="catsWrap" style="margin-top:10px;">${Object.keys(state.master).map(catHtml).join("")}</div>
+      <div class="row2" style="margin-top:14px;">
+        <input type="text" id="newCatName" placeholder="New category name">
+        <button class="btn small" id="addCatBtn">+ Add category</button>
+      </div>
+      <div class="foot-actions">
+        <button class="btn primary" id="closeItemModal2">Done</button>
+      </div>
+    </div>
+  </div>`;
+
+  function bind(){
+    document.querySelectorAll("[data-item]").forEach(row=>{
+      const [cat, idxStr] = row.dataset.item.split("|");
+      const idx = parseInt(idxStr);
+      row.querySelectorAll("[data-ifield]").forEach(el=>{
+        const ev = el.type==="checkbox" ? "change" : "change";
+        el.addEventListener(ev, ()=>{
+          const it = state.master[cat][idx];
+          const f = el.dataset.ifield;
+          if(f==="essential") it.essential = el.checked;
+          else if(f==="qty") it.qty = parseFloat(el.value)||1;
+          else if(f==="name") it.name = el.value.trim()||it.name;
+          else it[f] = el.value;
+          saveState();
+        });
+      });
+    });
+    document.querySelectorAll('[data-edittags]').forEach(wrap=>{
+      const key = wrap.getAttribute('data-edittags');
+      const [cat, idxStr] = key.split("|");
+      const idx = parseInt(idxStr);
+      wrap.querySelectorAll('input[type=checkbox]').forEach(cb=>{
+        cb.addEventListener("change", ()=>{
+          const checked = Array.from(wrap.querySelectorAll('input:checked')).map(c=>c.value);
+          state.master[cat][idx].tags = checked.length?checked:["always"];
+          saveState();
+        });
+      });
+    });
+    document.querySelectorAll("[data-del-item]").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const [cat, idx] = btn.dataset.delItem.split("|");
+        state.master[cat].splice(parseInt(idx),1);
+        saveState(); openItemManager();
+      });
+    });
+    document.querySelectorAll("[data-del-cat]").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        if(confirm("Delete this whole category?")){
+          delete state.master[btn.dataset.delCat];
+          saveState(); openItemManager();
+        }
+      });
+    });
+    document.querySelectorAll("[data-addbtn]").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const cat = btn.dataset.addbtn;
+        const nameEl = document.querySelector(`[data-newname="${CSS.escape(cat)}"]`);
+        const ruleEl = document.querySelector(`[data-newrule="${CSS.escape(cat)}"]`);
+        const qtyEl = document.querySelector(`[data-newqty="${CSS.escape(cat)}"]`);
+        const tagBoxes = document.querySelectorAll(`[data-newtags="${CSS.escape(cat)}"] input:checked`);
+        const name = nameEl.value.trim();
+        if(!name) return;
+        const tags = Array.from(tagBoxes).map(cb=>cb.value);
+        state.master[cat].push({
+          name, qtyRule: ruleEl.value, qty: parseFloat(qtyEl.value)||1,
+          tags: tags.length?tags:["always"], essential:false
+        });
+        saveState(); openItemManager();
+      });
+    });
+    document.getElementById("addCatBtn").addEventListener("click", ()=>{
+      const name = document.getElementById("newCatName").value.trim();
+      if(!name || state.master[name]) return;
+      state.master[name] = [];
+      saveState(); openItemManager();
+    });
+    const close = ()=>{ document.getElementById("modalRoot").innerHTML=""; renderAll(); };
+    document.getElementById("closeItemModal").addEventListener("click", close);
+    document.getElementById("closeItemModal2").addEventListener("click", close);
+    document.getElementById("itemModalBackdrop").addEventListener("click",(e)=>{ if(e.target.id==="itemModalBackdrop") close(); });
+  }
+  bind();
+}
+document.getElementById("manageItemsBtn").addEventListener("click", openItemManager);
+
+/* ---------------------------------------------------------
+   DASHBOARD RENDERING
+--------------------------------------------------------- */
+function daysBetween(a,b){
+  if(!a||!b) return 1;
+  const d1 = new Date(a), d2 = new Date(b);
+  const diff = Math.round((d2-d1)/(1000*60*60*24));
+  return Math.max(diff,1);
+}
+
+function getLegWeather(leg){
+  const zone = ZONE_TEMPLATES[leg.climateZone] || ZONE_TEMPLATES["temperate"];
+  const customs = [];
+  if(leg.modestDress){
+    customs.push("Modest dress area - shoulders and knees covered is a safe default in public places; swimwear only at pool/beach.");
+  }
+  if(leg.healthRisk){
+    customs.push("Health precautions may apply here (e.g. required/recommended vaccinations, malaria prevention, altitude prep) - confirm current requirements with a doctor, travel clinic, or an official travel health advisory (WHO or your own country's travel health service) for your specific destination.");
+  }
+  customs.push("Regulations, dress codes and entry requirements can change - always confirm current rules close to your travel date.");
+  return { tempC: zone.tempC, tempF: zone.tempF, note: zone.note, customs };
+}
+
+function allBags(trip){
+  const bags = [];
+  (trip.travelers||[]).forEach(t=>{
+    (t.bags||[]).forEach(b=>bags.push({id:b.id, label:(t.name||"Traveler")+" - "+(b.name||BAG_TYPES[b.type]?.label||"Bag"), type:b.type}));
+  });
+  return bags;
+}
+
+function activeTagsForTrip(trip){
+  const tags = new Set(["always"]);
+  trip.legs.forEach(leg=>{
+    const zone = CLIMATE_ZONES[leg.climateZone];
+    if(zone) zone.tags.forEach(t=>tags.add(t));
+    if(leg.beach) tags.add("beach");
+    if(leg.snorkel) tags.add("snorkel");
+    if(leg.modestDress) tags.add("modest");
+    if(leg.healthRisk) tags.add("healthrisk");
+  });
+  const bags = allBags(trip);
+  if(bags.length && bags.every(b=>BAG_TYPES[b.type] && BAG_TYPES[b.type].compact)) tags.add("space-limited");
+  return tags;
+}
+
+function computeQty(item, trip, totalDays){
+  const travelers = (trip.travelers && trip.travelers.length) || 1;
+  switch(item.qtyRule){
+    case "perDay": return Math.max(1, Math.ceil(item.qty * totalDays * travelers));
+    case "perPerson": return Math.ceil(item.qty * travelers);
+    case "perTrip": return Math.ceil(item.qty);
+    default: return Math.ceil(item.qty);
+  }
+}
+
+function renderMainArea(){
+  const mainArea = document.getElementById("mainArea");
+  const trip = state.trips.find(t=>t.id===activeTripId);
+  if(!trip){
+    mainArea.innerHTML = `<div class="empty-state panel" id="emptyState">
+      <p>No trip selected yet.</p>
+      <button class="btn primary" id="emptyNewTripBtn2">Create your first trip</button>
+    </div>`;
+    document.getElementById("emptyNewTripBtn2").addEventListener("click", ()=>openTripModal(null));
+    return;
+  }
+
+  const totalDays = trip.legs.reduce((sum,l)=>sum+daysBetween(l.startDate,l.endDate),0) || 1;
+  const activeTags = activeTagsForTrip(trip);
+
+  // Weather cards
+  const weatherHtml = trip.legs.map(leg=>{
+    const w = getLegWeather(leg);
+    const d = daysBetween(leg.startDate,leg.endDate);
+    return `<div class="weather-card">
+      <h4>${escapeHtml(leg.place||"Unnamed leg")}${leg.country?', '+escapeHtml(leg.country):''}</h4>
+      <div class="dates">${leg.startDate||'?'} &rarr; ${leg.endDate||'?'} (${d} day${d>1?'s':''})</div>
+      <div class="temps">${w.tempC ? w.tempC+'&deg;C / '+w.tempF+'&deg;F' : ''}</div>
+      <div class="note">${escapeHtml(w.note||'')}</div>
+      ${leg.modestDress?'<span class="badge">Modest dress</span>':''}
+      ${leg.healthRisk?'<span class="badge warn">Health precautions likely</span>':''}
+      ${leg.snorkel?'<span class="badge outline">Snorkeling</span>':''}
+    </div>`;
+  }).join("");
+
+  // Customs/etiquette notes (deduped)
+  const customsSet = new Set();
+  trip.legs.forEach(leg=>{
+    const w = getLegWeather(leg);
+    (w.customs||[]).forEach(c=>customsSet.add(c));
+  });
+
+  // Visa & entry checklist - per destination, per traveler nationality. Points to official sources
+  // rather than asserting requirements, which depend on the exact nationality+destination pair and change often.
+  const visaCardsHtml = trip.legs.filter(l=>l.country).map(leg=>{
+    const travCards = (trip.travelers||[]).filter(t=>t.nationality).map(t=>{
+      const nat = t.nationality.trim().toLowerCase();
+      const advisory = NATIONALITY_ADVISORY_LINKS[nat];
+      return `<div style="border-top:1px solid var(--line);padding-top:8px;margin-top:8px;">
+        <strong>${escapeHtml(t.name||"Traveler")}</strong> (${escapeHtml(t.nationality)}) entering ${escapeHtml(leg.country)}:
+        <ul style="margin:6px 0 0 18px;padding:0;">
+          <li>Check the visa requirement and how to get it (e-visa online, visa on arrival, or apply at an embassy/consulate beforehand) on ${escapeHtml(leg.country)}'s official immigration/e-visa website, or the nearest ${escapeHtml(leg.country)} embassy/consulate.</li>
+          <li>Cross-check via <a href="https://www.iatatravelcentre.com/" target="_blank" rel="noopener">IATA Travel Centre</a> (airline-industry visa/health requirement lookup by nationality and destination).</li>
+          ${advisory?`<li>Your home country's official travel advisory: <a href="${advisory.url}" target="_blank" rel="noopener">${escapeHtml(advisory.label)}</a>.</li>`:`<li>Check your home country's official foreign affairs/travel advisory website for ${escapeHtml(leg.country)}.</li>`}
+          <li>If any fee applies on arrival or exit, confirm the exact amount and accepted payment (cash/card, which currency) via the sources above - carry small-denomination local currency or USD as a backup since exact change or cash-only is common at many borders.</li>
+        </ul>
+      </div>`;
+    }).join("");
+    if(!travCards) return "";
+    return `<div class="weather-card" style="text-align:left;">
+      <h4>Visa &amp; entry - ${escapeHtml(leg.place||leg.country)}</h4>
+      ${travCards}
+    </div>`;
+  }).join("");
+
+  // Build checklist grouped by category, filtered by active tags
+  if(!trip.checked) trip.checked = {};
+  if(!trip.bagAssignments) trip.bagAssignments = {};
+  const bags = allBags(trip);
+  // "Bag" assignment options always include two non-physical choices, since some items (visa approvals,
+  // boarding passes, document copies) aren't packed in a bag at all - they're a phone file or kept separately.
+  const pseudoBags = [
+    {id:"__digital__", label:"Digital file / phone (not packed)"},
+    {id:"__separate__", label:"Kept separately (e.g. document folder)"}
+  ];
+  const bagOptions = `<option value="">Unassigned</option>`
+    + bags.map(b=>`<option value="${escapeAttr(b.id)}">${escapeHtml(b.label)}</option>`).join("")
+    + pseudoBags.map(b=>`<option value="${b.id}">${escapeHtml(b.label)}</option>`).join("");
+
+  let totalItems=0, checkedItems=0;
+  function buildRow(key, qty, label, it){
+    const isChecked = !!trip.checked[key];
+    const assignedBag = trip.bagAssignments[key] || "";
+    totalItems++; if(isChecked) checkedItems++;
+    return `<div class="item-row">
+      <input type="checkbox" data-key="${escapeAttr(key)}" ${isChecked?'checked':''}>
+      <span class="qty">${qty}x</span>
+      <span class="name ${isChecked?'checked':''}">${escapeHtml(label)}${it.essential?' <span class="badge outline">essential</span>':''}
+        ${it.note?`<span class="note">${escapeHtml(it.note)}</span>`:''}
+      </span>
+      <select class="bag-select" data-bagkey="${escapeAttr(key)}" style="width:auto;min-width:150px;font-size:.78rem;padding:5px 6px;">${bagOptions.replace(`value="${assignedBag}"`, `value="${assignedBag}" selected`)}</select>
+    </div>`;
+  }
+  const categoriesHtml = Object.entries(state.master).map(([cat, items])=>{
+    const matched = items.filter(it => it.tags.some(t=>activeTags.has(t)));
+    if(!matched.length) return "";
+    const rows = [];
+    matched.forEach(it=>{
+      // Per-person items get one row PER TRAVELER (own checkbox + own bag/file assignment) instead of
+      // one combined row - so two different people's visas, passports etc. can be tracked separately.
+      if(it.qtyRule==="perPerson" && trip.travelers && trip.travelers.length){
+        trip.travelers.forEach(tr=>{
+          const key = cat+"::"+it.name+"::"+tr.id;
+          const qty = Math.max(1, Math.round(it.qty));
+          rows.push(buildRow(key, qty, (tr.name||"Traveler")+" - "+it.name, it));
+        });
+      } else {
+        const key = cat+"::"+it.name;
+        const qty = computeQty(it, trip, totalDays);
+        rows.push(buildRow(key, qty, it.name, it));
+      }
+    });
+    const doneInCat = matched.reduce((n,it)=>{
+      if(it.qtyRule==="perPerson" && trip.travelers && trip.travelers.length){
+        return n + trip.travelers.filter(tr=>trip.checked[cat+"::"+it.name+"::"+tr.id]).length;
+      }
+      return n + (trip.checked[cat+"::"+it.name] ? 1 : 0);
+    }, 0);
+    return `<details class="collapsible-section category-collapsible"><summary>${escapeHtml(cat)} <span class="small-note" style="display:inline;">(${doneInCat}/${rows.length})</span></summary><div class="category-block" style="margin-top:8px;">${rows.join("")}</div></details>`;
+  }).join("");
+
+  const pct = totalItems ? Math.round((checkedItems/totalItems)*100) : 0;
+
+  const travelerSummary = (trip.travelers||[]).map(t=>{
+    const bagList = (t.bags||[]).map(b=>b.name || (BAG_TYPES[b.type]?BAG_TYPES[b.type].label:"Bag")).join(", ");
+    return `<span class="badge outline">${escapeHtml(t.name||"Traveler")}: ${escapeHtml(bagList)} <button type="button" class="rm" data-quickaddbag="${t.id}" title="Add a bag for ${escapeAttr(t.name||'this traveler')}" style="margin-left:4px;">+bag</button></span>`;
+  }).join(" ");
+
+  mainArea.innerHTML = `
+    <div class="panel no-print">
+      <button class="btn small" id="editTripBtn">Edit trip details</button>
+      <button class="btn small" id="printBtn">Print checklist</button>
+      <button class="btn small danger" id="resetCheckBtn">Reset all checks</button>
+      <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+        <span class="small-note" style="margin:0;">Copy a short list for Google Keep / Notes:</span>
+        <select id="copyScopeSelect" style="width:auto;min-width:160px;padding:6px 8px;font-size:.8rem;">
+          <option value="shared">Shared items (whole trip)</option>
+          ${(trip.travelers||[]).map(t=>`<option value="${escapeAttr(t.id)}">${escapeHtml(t.name||"Traveler")}'s items</option>`).join("")}
+          <option value="all">Everything (long)</option>
+        </select>
+        <button class="btn small" id="copyKeepBtn">Copy</button>
+        <button class="btn small" id="shareBtn" style="display:none;">Share</button>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:14px;">
+      <div class="dash-header">
+        <div>
+          <h2 style="margin:0;">${escapeHtml(trip.name)}</h2>
+          <p class="small-note">${totalDays} total day${totalDays>1?'s':''}</p>
+          <div style="margin-top:6px;">${travelerSummary}</div>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+          <div class="progress-label">${checkedItems} / ${totalItems} packed (${pct}%)</div>
+        </div>
+      </div>
+      <div class="weather-grid">${weatherHtml}</div>
+      ${customsSet.size ? `<details class="collapsible-section"><summary>General customs &amp; dress-code notes</summary><div class="disclaimer" style="margin-top:8px;"><ul style="margin:0 0 0 18px;padding:0;">${Array.from(customsSet).map(c=>`<li>${escapeHtml(c)}</li>`).join("")}</ul></div></details>` : ''}
+      ${visaCardsHtml ? `<details class="collapsible-section"><summary>Visa &amp; entry - check before you fly</summary><div class="weather-grid" style="margin-top:8px;">${visaCardsHtml}</div></details>` : (trip.legs.some(l=>l.country) ? '<p class="small-note">Add a nationality for each traveler above to see visa/entry checklist links per destination.</p>' : '')}
+      <p class="small-note">Use the dropdown next to each item to choose which bag it goes in, or mark it as a digital file / kept separately.</p>
+      ${categoriesHtml ? `<div class="no-print" style="margin-bottom:8px;"><button type="button" class="btn small ghost" id="expandAllBtn">Expand all</button> <button type="button" class="btn small ghost" id="collapseAllBtn">Collapse all</button></div>` : ''}
+      ${categoriesHtml || '<p class="small-note">No matching items yet - add some in "Manage item list".</p>'}
+    </div>
+  `;
+
+  document.getElementById("editTripBtn").addEventListener("click", ()=>openTripModal(trip.id));
+  document.getElementById("printBtn").addEventListener("click", ()=>window.print());
+  document.getElementById("copyKeepBtn").addEventListener("click", ()=>{
+    const scope = document.getElementById("copyScopeSelect").value;
+    copyChecklistText(trip, scope);
+  });
+  if(navigator.share){
+    const shareBtn = document.getElementById("shareBtn");
+    shareBtn.style.display = "";
+    shareBtn.addEventListener("click", ()=>{
+      const scope = document.getElementById("copyScopeSelect").value;
+      navigator.share({title: trip.name, text: buildChecklistText(trip, scope)}).catch(()=>{});
+    });
+  }
+  document.getElementById("resetCheckBtn").addEventListener("click", ()=>{
+    if(confirm("Uncheck all items for this trip?")){
+      trip.checked = {}; saveState(); renderAll();
+    }
+  });
+  const expandAllBtn = document.getElementById("expandAllBtn");
+  if(expandAllBtn) expandAllBtn.addEventListener("click", ()=>{
+    mainArea.querySelectorAll("details.category-collapsible").forEach(d=>d.open=true);
+  });
+  const collapseAllBtn = document.getElementById("collapseAllBtn");
+  if(collapseAllBtn) collapseAllBtn.addEventListener("click", ()=>{
+    mainArea.querySelectorAll("details.category-collapsible").forEach(d=>d.open=false);
+  });
+  mainArea.querySelectorAll("[data-quickaddbag]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      openQuickAddBagModal(trip, btn.dataset.quickaddbag);
+    });
+  });
+  mainArea.querySelectorAll("[data-bagkey]").forEach(sel=>{
+    sel.addEventListener("change", ()=>{
+      trip.bagAssignments[sel.dataset.bagkey] = sel.value;
+      saveState();
+    });
+  });
+  mainArea.querySelectorAll("[data-key]").forEach(cb=>{
+    cb.addEventListener("change", ()=>{
+      trip.checked[cb.dataset.key] = cb.checked;
+      saveState();
+      renderMainArea();
+    });
+  });
+}
+
+// Builds a flat, one-item-per-line checklist. Google Keep has no public API a page like this can call
+// directly, but pasting multi-line text into a new Keep "List" note auto-splits each line into its own
+// checkable item - so "copy" is the practical way to get this into Keep (or Apple Notes, Reminders, etc.)
+// scope: "shared" (items for the whole trip, not tied to one person), a traveler id (that person's own
+// items only, short), or "all" (everything, longer - closer to a full printout).
+function buildChecklistText(trip, scope){
+  scope = scope || "shared";
+  const totalDays = trip.legs.reduce((sum,l)=>sum+daysBetween(l.startDate,l.endDate),0) || 1;
+  const activeTags = activeTagsForTrip(trip);
+  let title = trip.name;
+  if(scope==="shared") title += " - Shared items";
+  else if(scope!=="all"){
+    const tr = (trip.travelers||[]).find(t=>t.id===scope);
+    title += " - " + (tr?(tr.name||"Traveler"):"Traveler") + "'s items";
+  }
+  const lines = [title, ""];
+  Object.entries(state.master).forEach(([cat, items])=>{
+    const matched = items.filter(it => it.tags.some(t=>activeTags.has(t)));
+    if(!matched.length) return;
+    const catLines = [];
+    matched.forEach(it=>{
+      if(it.qtyRule==="perPerson" && trip.travelers && trip.travelers.length){
+        trip.travelers.forEach(tr=>{
+          if(scope==="shared") return; // per-person items are never "shared"
+          if(scope!=="all" && scope!==tr.id) return; // only this traveler's own copy
+          const label = scope==="all" ? (tr.name||"Traveler")+" - "+it.name : it.name;
+          catLines.push(label);
+        });
+      } else {
+        if(scope!=="all" && scope!=="shared") return; // a per-traveler copy skips shared items
+        const qty = computeQty(it, trip, totalDays);
+        catLines.push((qty>1?qty+"x ":"")+it.name);
+      }
+    });
+    if(catLines.length){
+      lines.push(cat.toUpperCase());
+      lines.push(...catLines);
+      lines.push("");
+    }
+  });
+  if(lines.length<=2) lines.push("(Nothing in this list yet.)");
+  return lines.join("\n");
+}
+function copyChecklistText(trip, scope){
+  const text = buildChecklistText(trip, scope);
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(()=>{
+      alert("Copied. Open Google Keep, start a new List, and paste - each line becomes its own checkable item.");
+    }).catch(()=>{ fallbackCopy(text); });
+  } else {
+    fallbackCopy(text);
+  }
+}
+function fallbackCopy(text){
+  const ta = document.createElement("textarea");
+  ta.value = text; ta.style.position="fixed"; ta.style.opacity="0";
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand("copy"); alert("Checklist copied. Paste it into a new Google Keep List."); }
+  catch(e){ prompt("Copy this text manually:", text); }
+  document.body.removeChild(ta);
+}
+
+function escapeHtml(s){ return (s||"").toString().replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function escapeAttr(s){ return escapeHtml(s); }
+
+function renderAll(){
+  applyTheme();
+  applyPanelVisibility();
+  renderTripList();
+  renderMainArea();
+}
+
+renderAll();
+</script>
+</body>
+</html>
